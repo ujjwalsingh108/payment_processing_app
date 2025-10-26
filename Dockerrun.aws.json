@@ -1,0 +1,12 @@
+{
+  "AWSEBDockerrunVersion": "1",
+  "Image": {
+    "Name": "ujjwalsingh108/payment-processing-app:latest"
+  },
+  "Ports": [
+    {
+      "ContainerPort": 8000,
+      "HostPort": 80
+    }
+  ]
+}
