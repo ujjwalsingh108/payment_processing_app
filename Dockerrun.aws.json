@@ -1,7 +1,7 @@
 {
   "AWSEBDockerrunVersion": "1",
   "Image": {
-    "Name": "ujjwalsingh108/payment-processing-app:latest"
+    "Name": "ujjwalsingh108/payment-processing-app:simple"
   },
   "Ports": [
     {

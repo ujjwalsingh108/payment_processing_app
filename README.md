@@ -143,53 +143,81 @@ After ~30 seconds:
 
 ## Testing
 
-I included some test scripts to make testing easier.
+I included some test scripts to make testing easier. You can test both locally and on the live AWS deployment.
 
-### Test 1: Single Transaction
+### 🌐 **Live API on AWS**
+The app is deployed and running at: **http://payment-processing-app.us-east-1.elasticbeanstalk.com**
 
-```bash
-# Send a webhook
-curl -X POST http://localhost:8000/v1/webhooks/transactions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "transaction_id": "txn_test_001",
-    "source_account": "acc_user_001",
-    "destination_account": "acc_merchant_001",
-    "amount": 1500,
-    "currency": "INR"
-  }'
+### Test 1: Quick Health Check
 
-# Check status right away (should say PROCESSING)
-curl http://localhost:8000/v1/transactions/txn_test_001
+```powershell
+# Test locally
+Invoke-RestMethod -Uri "http://localhost:8000/"
 
-# Wait about 30 seconds then check again (should say PROCESSED)
-sleep 30
-curl http://localhost:8000/v1/transactions/txn_test_001
+# Test on AWS (live)
+Invoke-RestMethod -Uri "http://payment-processing-app.us-east-1.elasticbeanstalk.com/"
 ```
 
-### Test 2: Duplicate Prevention
+### Test 2: Send a Webhook
 
-Send the same webhook multiple times and make sure only one gets processed:
+```powershell
+# Send to local instance
+Invoke-RestMethod -Uri "http://localhost:8000/v1/webhooks/transactions" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{"transaction_id":"txn_test_001","source_account":"acc_user_001","destination_account":"acc_merchant_001","amount":1500,"currency":"INR"}'
 
-```bash
-# Send same webhook 3 times
-for i in {1..3}; do
-  curl -X POST http://localhost:8000/v1/webhooks/transactions \
-    -H "Content-Type: application/json" \
-    -d '{
-      "transaction_id": "txn_duplicate_test",
-      "source_account": "acc_user_002",
-      "destination_account": "acc_merchant_002",
-      "amount": 2500,
-      "currency": "INR"
-    }'
-done
-
-# Check - should only show ONE transaction
-curl http://localhost:8000/v1/transactions/txn_duplicate_test
+# Send to AWS (live deployment)
+Invoke-RestMethod -Uri "http://payment-processing-app.us-east-1.elasticbeanstalk.com/v1/webhooks/transactions" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{"transaction_id":"txn_aws_001","source_account":"acc_user_001","destination_account":"acc_merchant_001","amount":1500,"currency":"INR"}'
 ```
 
-### Test 3: Run All Tests
+### Test 3: Check Transaction Status
+
+```powershell
+# Check local transaction
+Invoke-RestMethod -Uri "http://localhost:8000/v1/transactions/txn_test_001"
+
+# Check AWS transaction
+Invoke-RestMethod -Uri "http://payment-processing-app.us-east-1.elasticbeanstalk.com/v1/transactions/txn_aws_001"
+```
+
+### Test 4: Duplicate Prevention
+
+Send the same webhook multiple times to make sure only one gets processed:
+
+```powershell
+# Test duplicates on AWS
+for ($i=1; $i -le 3; $i++) {
+  Write-Host "Sending duplicate webhook attempt $i"
+  Invoke-RestMethod -Uri "http://payment-processing-app.us-east-1.elasticbeanstalk.com/v1/webhooks/transactions" `
+    -Method POST `
+    -ContentType "application/json" `
+    -Body '{"transaction_id":"txn_duplicate_test","source_account":"acc_user_002","destination_account":"acc_merchant_002","amount":2500,"currency":"INR"}'
+}
+
+# Check that only one transaction exists
+Invoke-RestMethod -Uri "http://payment-processing-app.us-east-1.elasticbeanstalk.com/v1/transactions/txn_duplicate_test"
+```
+
+### Test 5: Multiple Different Transactions
+
+```powershell
+# Send different transactions to AWS
+Invoke-RestMethod -Uri "http://payment-processing-app.us-east-1.elasticbeanstalk.com/v1/webhooks/transactions" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{"transaction_id":"txn_usd_001","source_account":"acc_user_003","destination_account":"acc_merchant_003","amount":750,"currency":"USD"}'
+
+Invoke-RestMethod -Uri "http://payment-processing-app.us-east-1.elasticbeanstalk.com/v1/webhooks/transactions" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{"transaction_id":"txn_eur_001","source_account":"acc_user_004","destination_account":"acc_merchant_004","amount":999.99,"currency":"EUR"}'
+```
+
+### Automated Testing
 
 There's a test script that runs everything:
 
@@ -199,13 +227,21 @@ python test_service.py
 
 ### Interactive Testing
 
-Or use the manual test script for a more interactive experience:
+Or use the manual test script:
 
 ```bash
 python manual_test.py
 ```
 
-Also check out the API docs at `http://localhost:8000/docs` - it's pretty handy for testing.
+### API Documentation
+
+Check out the interactive API docs:
+- **Local:** `http://localhost:8000/docs`
+- **AWS:** `http://payment-processing-app.us-east-1.elasticbeanstalk.com/docs`
+
+### Performance Testing
+
+The API responds super fast (usually under 100ms) and handles duplicate webhooks properly. Try hitting it with multiple requests - it won't break!
 
 ## Why I Chose These Technologies
 
