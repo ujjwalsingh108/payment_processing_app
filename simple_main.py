@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
@@ -47,30 +47,40 @@ async def health_check():
     )
 
 @app.post("/v1/webhooks/transactions", response_model=WebhookResponse, status_code=202)
-async def receive_webhook(webhook: WebhookRequest):
+async def receive_webhook(webhook: WebhookRequest, background_tasks: BackgroundTasks):
     # Check if transaction already exists (idempotency)
     if webhook.transaction_id in transactions:
         return WebhookResponse(
             message="Transaction already received",
             transaction_id=webhook.transaction_id
         )
-    
-    # Store transaction (in memory for demo)
+
+    # Store transaction as PROCESSING
     transactions[webhook.transaction_id] = {
         "transaction_id": webhook.transaction_id,
         "source_account": webhook.source_account,
         "destination_account": webhook.destination_account,
         "amount": webhook.amount,
         "currency": webhook.currency,
-        "status": "PROCESSED",  # For demo, mark as processed immediately
+        "status": "PROCESSING",
         "created_at": datetime.utcnow().isoformat() + "Z",
-        "processed_at": datetime.utcnow().isoformat() + "Z"
+        "processed_at": None
     }
-    
+
+    # Schedule background processing
+    background_tasks.add_task(process_transaction, webhook.transaction_id)
+
     return WebhookResponse(
         message="Transaction accepted for processing",
         transaction_id=webhook.transaction_id
     )
+
+def process_transaction(transaction_id: str):
+    import time
+    time.sleep(30)
+    if transaction_id in transactions:
+        transactions[transaction_id]["status"] = "PROCESSED"
+        transactions[transaction_id]["processed_at"] = datetime.utcnow().isoformat() + "Z"
 
 @app.get("/v1/transactions/{transaction_id}", response_model=TransactionResponse)
 async def get_transaction(transaction_id: str):
