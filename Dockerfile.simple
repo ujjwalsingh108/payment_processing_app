@@ -8,8 +8,8 @@ RUN pip install fastapi==0.104.1 uvicorn[standard]==0.24.0
 # Copy the simple main file
 COPY simple_main.py main.py
 
-# Expose port
-EXPOSE 8000
+# Expose port 80 for AWS Elastic Beanstalk
+EXPOSE 80
 
-# Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the application on port 80
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
